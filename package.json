@@ -1,0 +1,108 @@
+{
+  "name": "function-tree",
+  "displayName": "Functions Navigator",
+  "description": "Instantly browse, filter, and navigate functions in PHP, JavaScript, TypeScript, and Python files with a sleek Function Navigator view in Explorer, designed to save time and improve code clarity.",
+  "version": "1.3.3",
+  "icon": "icon.png",
+  "license": "MIT",
+  "publisher": "CodeUnit-TL",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codeunitdev/function-navigator"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Visualization"
+  ],
+  "keywords": [
+    "function",
+    "navigator",
+    "explorer",
+    "tree",
+    "code outline",
+    "symbol viewer",
+    "php",
+    "javascript",
+    "typescript",
+    "python",
+    "function browser",
+    "function list",
+    "jump to function"
+  ],
+  "activationEvents": [
+    "onLanguage:php",
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onLanguage:python",
+    "workspaceContains:**/*.{php,js,ts,jsx,tsx,py,pyw}"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "functionTreeView",
+          "name": "Project + Functions",
+          "icon": "✨"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "functionTreeView",
+        "contents": "No PHP, JavaScript, TypeScript, or Python functions detected yet.\n[Open Folder](command:vscode.openFolder)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "functionTree.navigateToFunction",
+        "title": "Navigate to Function",
+        "category": "Function Tree"
+      },
+      {
+        "command": "functionTree.refresh",
+        "title": "Refresh Function Tree",
+        "category": "Function Tree"
+      },
+      {
+        "command": "functionTree.debugTree",
+        "title": "Function Tree: Debug Tree",
+        "category": "Function Tree"
+      }
+    ],
+    "configuration": {
+      "title": "Function Tree",
+      "properties": {
+        "functionTree.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable function display and badges"
+        },
+        "functionTree.filterRegex": {
+          "type": "string",
+          "default": "",
+          "description": "Regular expression to filter function names (e.g., '^get.*' to show only functions starting with 'get')"
+        },
+        "functionTree.pythonMaxDepth": {
+          "type": "number",
+          "default": 1,
+          "description": "Maximum nested function depth to display in Python files (0 = top-level only)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.8.10",
+    "typescript": "^5.2.2"
+  }
+}
