@@ -1,0 +1,32 @@
+# Enforce consistent text file normalization
+* text=auto eol=lf
+
+# Treat source files as text, ensure LF endings
+*.ts text eol=lf
+*.js text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+
+# Binary files - never convert line endings
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg binary
+*.vsix binary
+*.zip binary
+
+# Prevent Git from marking compiled JS files as text changes due to EOL differences
+out/** -text
+
+# Keep changelog and license consistent too
+LICENSE text eol=lf
+CHANGELOG.md text eol=lf
+
+# VS Code workspace files
+.vscode/** text eol=lf

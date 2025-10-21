@@ -1,0 +1,133 @@
+{
+  "name": "function-tree",
+  "displayName": "Functions Navigator",
+  "description": "Instantly browse, filter, and navigate functions in PHP, JavaScript, TypeScript, Python, Vue, and Svelte files with a sleek Function Navigator view in Explorer.",
+  "version": "1.3.6",
+  "icon": "icon.png",
+  "license": "MIT",
+  "publisher": "CodeUnit-TL",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/codeunitdev/function-navigator"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Visualization"
+  ],
+  "keywords": [
+    "function",
+    "navigator",
+    "explorer",
+    "tree",
+    "code outline",
+    "symbol viewer",
+    "php",
+    "javascript",
+    "typescript",
+    "python",
+    "vue",
+    "svelte",
+    "function browser",
+    "function list",
+    "jump to function"
+  ],
+  "activationEvents": [
+    "onLanguage:php",
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onLanguage:python",
+    "onLanguage:vue",
+    "onLanguage:svelte",
+    "workspaceContains:**/*.{php,js,ts,jsx,tsx,py,pyw,vue,mjs,cjs,svelte}"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "views": {
+      "explorer": [
+        {
+          "id": "functionTreeView",
+          "name": "Project + Functions",
+          "icon": "✨"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "functionTreeView",
+        "contents": "No PHP, JavaScript, TypeScript, Python, Vue, or Svelte functions detected yet.\n[Open Folder](command:vscode.openFolder)"
+      }
+    ],
+    "commands": [
+      {
+        "command": "functionTree.navigateToFunction",
+        "title": "Navigate to Function",
+        "category": "Function Tree"
+      },
+      {
+        "command": "functionTree.refresh",
+        "title": "Refresh Function Tree",
+        "category": "Function Tree"
+      },
+      {
+        "command": "functionTree.debugTree",
+        "title": "Function Tree: Debug Tree",
+        "category": "Function Tree"
+      }
+    ],
+    "configuration": {
+      "title": "Function Tree",
+      "properties": {
+        "functionTree.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable or disable function display and badges."
+        },
+        "functionTree.filterRegex": {
+          "type": "string",
+          "default": "",
+          "description": "Regular expression to filter function names (e.g., '^get.*' to show only functions starting with 'get')."
+        },
+        "functionTree.pythonMaxDepth": {
+          "type": "number",
+          "default": 1,
+          "description": "Maximum nested function depth to display in Python files (0 = top-level only)."
+        },
+        "functionTree.debounceMs": {
+          "type": "number",
+          "default": 250,
+          "minimum": 25,
+          "maximum": 5000,
+          "description": "Delay (in milliseconds) before refreshing after text changes."
+        },
+        "functionTree.maxCacheEntries": {
+          "type": "number",
+          "default": 500,
+          "minimum": 10,
+          "maximum": 20000,
+          "description": "Maximum number of documents to cache for parsed functions."
+        }
+      }
+    }
+  },
+  "scripts": {
+  "bundle": "node bundle.js",
+  "vscode:prepublish": "npm run bundle",
+  "watch": "esbuild src/extension.ts --bundle --platform=node --external:vscode --outfile=out/extension.js --watch",
+  "tsc:watch": "tsc -watch -p ./"
+},
+  "devDependencies": {
+    "@types/node": "^20.8.10",
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.25.11",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@vue/compiler-sfc": "^3.5.22",
+    "svelte": "^5.41.1",
+    "typescript": "^5.9.3"
+  }
+}

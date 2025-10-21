@@ -1,0 +1,51 @@
+# ===============================
+# Ignore development and unnecessary files
+# ===============================
+.vscode/**
+src/**
+tests/**
+**/*.map
+**/*.log
+tsconfig.json
+package-lock.json
+.gitignore
+.git/**
+.github/**
+.vscodeignore
+
+# ===============================
+# Exclude all node_modules first
+# ===============================
+node_modules/**
+
+# ===============================
+# Re-include only essential runtime dependencies (for AST, SFC, etc.)
+# ===============================
+
+# TypeScript AST runtime
+!node_modules/typescript/lib/**
+
+# Vue SFC compiler runtime (exclude template engines)
+!node_modules/@vue/compiler-sfc/dist/**
+# Optional: leave out template engines
+node_modules/@vue/compiler-sfc/dist/**/*.cjs.js
+
+# Svelte compiler runtime (AST only)
+!node_modules/svelte/compiler/**
+
+# ===============================
+# Include built extension output (esbuild bundle)
+# ===============================
+!out/**
+
+# ===============================
+# Include essential assets
+# ===============================
+!icon.png
+!changelog.md
+!readme.md
+!screenshot.jpg
+!demo.gif
+
+# Include package.json if needed at runtime
+!package.json
