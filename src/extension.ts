@@ -28,7 +28,7 @@ class PhpParser implements LanguageParser {
 
 class JsTsParser implements LanguageParser {
   languageId = 'javascript';
-  fileExtensions = ['js', 'ts', 'jsx', 'tsx'];
+  fileExtensions = ['js', 'ts', 'jsx', 'tsx', 'vue'];
   
   parse(content: string): { name: string; line: number }[] {
     console.log('Parsing JS/TS content:', content.substring(0, 100));
