@@ -67,10 +67,10 @@ ext install CodeUnit-TL.function-tree
 
 ## ⭐ Support the Project
 
-If **Functions Navigator** makes your coding a little smoother, please consider supporting it:
+If **Functions Navigator** makes your workflow smoother, please consider supporting it — it really helps!  
 
 - ⭐ [Leave a review on the Marketplace](https://marketplace.visualstudio.com/items?itemName=CodeUnit-TL.function-tree&ssr=false#review-details) — it really helps others discover it  
-- 🐙 [Star the project on GitHub](https://github.com/codeunitdev/function-navigator) _(GitHub repo)_  
+- 🐙 [Star the project on GitHub](https://github.com/codeunitdev/function-navigator) _(GitHub repo)_  to show your support  
 - 💬 Share it with your teammates or community
 
-Your feedback and support keep the project growing. 🙌
+Your feedback and encouragement keep the project improving. 🙌

@@ -1,3 +1,20 @@
+/**
+ * 🧭 Functions Navigator – VS Code Extension
+ * -----------------------------------------------------
+ * Instantly browse, filter, and jump between functions in your code.
+ * This is the main activation file — it wires up the Function Tree view,
+ * registers commands, and connects to language parsers.
+ *
+ * Built with ❤️ by CodeUnit TL
+ *
+ * @author CodeUnit TL
+ * @license MIT
+ * @version 1.3.7
+ * @updated 2025-10-22
+ * @website https://codeunit.org
+ * @repository https://github.com/codeunitdev/function-navigator
+ * @see https://marketplace.visualstudio.com/items?itemName=CodeUnit-TL.function-tree
+ */
 import * as vscode from 'vscode';
 import * as path from 'path';
 
@@ -767,12 +784,53 @@ class FunctionTreeDataProvider implements vscode.TreeDataProvider<vscode.Uri> {
     }
 
     // File node
+
+    //This puts > on all files
+    /*
     return {
       label: path.basename(element.fsPath),
       resourceUri: element,
       collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
       iconPath: vscode.ThemeIcon.File
     };
+    repleced by the code below to put > only for files with childs
+    */
+   //replaces the above code
+   // Determine if file has functions
+let functions: { name: string; line: number }[] = [];
+try {
+  const ext = path.extname(element.fsPath).toLowerCase().slice(1);
+  const supported = this.parserRegistry.getSupportedExtensions();
+  if (supported.includes(ext)) {
+    const document = await vscode.workspace.openTextDocument(element);
+    functions = await this.parseDocument(document);
+  }
+} catch (e) {
+  console.error('Error checking functions for file:', element.fsPath, e);
+}
+
+const hasChildren = functions.length > 0;
+
+return {
+  label: path.basename(element.fsPath),
+  resourceUri: element,
+  collapsibleState: hasChildren 
+    ? vscode.TreeItemCollapsibleState.Collapsed 
+    : vscode.TreeItemCollapsibleState.None,
+  iconPath: vscode.ThemeIcon.File,
+  command: {
+    command: 'vscode.open',
+    title: 'Open File',
+    arguments: [element]
+  }
+};
+
+
+
+
+
+
+
   }
 
   async getChildren(element?: vscode.Uri): Promise<vscode.Uri[]> {
@@ -853,7 +911,10 @@ class FunctionTreeDataProvider implements vscode.TreeDataProvider<vscode.Uri> {
         return vscode.Uri.parse(uriString);
       });
 
-      return functionUris;
+      //return functionUris;
+      
+      // 🟢 NEW: return [] if there are no functions, to hide toggle (>)
+      return functionUris.length > 0 ? functionUris : [];
     } catch (e) {
       console.error('Error parsing file', element.fsPath, e);
       return [];

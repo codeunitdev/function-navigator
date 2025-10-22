@@ -1,0 +1,8 @@
+# Node modules
+node_modules/
+
+# VS Code extension package
+*.vsix
+
+# Optional: log files
+*.log

@@ -1,5 +1,9 @@
 # Changelog
 
+## [1.3.7] – 2025-10-22
+### 🚀 Very Useful Update
+- Clicking on a file now opens it in the editor, just like in the normal File Explorer. This makes the **Project + Functions Pane** a practical replacement for the default Project Pane.
+
 ## [1.3.6] – 2025-10-21
 - Bundled with `esbuild` for faster runtime and smaller size.  
 - Local VSIX testing workflow added before publishing.  

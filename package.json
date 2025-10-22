@@ -2,7 +2,7 @@
   "name": "function-tree",
   "displayName": "Functions Navigator",
   "description": "Instantly browse, filter, and navigate functions in PHP, JavaScript, TypeScript, Python, Vue, and Svelte files with a sleek Function Navigator view in Explorer.",
-  "version": "1.3.6",
+  "version": "1.3.7",
   "icon": "icon.png",
   "license": "MIT",
   "publisher": "CodeUnit-TL",
@@ -117,7 +117,8 @@
   "bundle": "node bundle.js",
   "vscode:prepublish": "npm run bundle",
   "watch": "esbuild src/extension.ts --bundle --platform=node --external:vscode --outfile=out/extension.js --watch",
-  "tsc:watch": "tsc -watch -p ./"
+  "tsc:watch": "tsc -watch -p ./",
+  "compile": "tsc -p ./"
 },
   "devDependencies": {
     "@types/node": "^20.8.10",
