@@ -17,9 +17,7 @@ Make sense of large files in seconds. Save time. Stay in flow.
 
 ## 🖼️ Preview
 
-> _Quickly explore and jump to functions without leaving your current file_
-
-![Functions Navigator Demo](https://codeunitdev.github.io/function-navigator/demo.gif)
+> _Quickly jump to functions without unnecessary scrolling through files_
 
 ![Functions Navigator Screenshot](https://codeunitdev.github.io/function-navigator/screenshot.jpg)
 
