@@ -2,7 +2,7 @@
   "name": "function-tree",
   "displayName": "Functions Navigator",
   "description": "Instantly browse, filter, and navigate functions in PHP, JavaScript, TypeScript, Python, Vue, and Svelte files with a sleek Function Navigator view in Explorer.",
-  "version": "1.3.7",
+  "version": "1.3.8",
   "icon": "icon.png",
   "license": "MIT",
   "publisher": "CodeUnit-TL",
@@ -51,7 +51,7 @@
         {
           "id": "functionTreeView",
           "name": "Project + Functions",
-          "icon": "✨"
+          "icon": "$(list-tree)"
         }
       ]
     },
@@ -65,19 +65,116 @@
       {
         "command": "functionTree.navigateToFunction",
         "title": "Navigate to Function",
-        "category": "Function Tree"
+        "category": "Function Tree",
+        "icon": "$(search)"
       },
       {
         "command": "functionTree.refresh",
         "title": "Refresh Function Tree",
-        "category": "Function Tree"
+        "category": "Function Tree",
+        "icon": "$(refresh)"
       },
       {
         "command": "functionTree.debugTree",
         "title": "Function Tree: Debug Tree",
-        "category": "Function Tree"
+        "category": "Function Tree",
+        "icon": "$(debug-alt)"
+      },
+      {
+        "command": "vscode.open",
+        "title": "Open File"
+        
+      },
+      {
+        "command": "revealFileInOS",
+        "title": "Reveal in File Explorer"
+      },
+      {
+        "command": "copyFilePath",
+        "title": "Copy Path"
+      },
+      {
+        "command": "copyRelativeFilePath",
+        "title": "Copy Relative Path"
+      },
+      {
+        "command": "functionTree.renameFile",
+        "title": "Rename File"
+      },
+      {
+        "command": "functionTree.deleteFile",
+        "title": "Delete File"
       }
     ],
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "functionTree.refresh",
+          "when": "view == functionTreeView && viewItem == folder",
+          "group": "inline"
+        },
+        {
+          "command": "functionTree.navigateToFunction",
+          "when": "view == functionTreeView && viewItem == function",
+          "group": "inline"
+        },
+        {
+          "command": "vscode.open",
+          "when": "view == functionTreeView && viewItem == file",
+          "group": "navigation"
+        },
+        {
+          "command": "revealFileInOS",
+          "when": "view == functionTreeView && viewItem == file",
+          "group": "2_files"
+        },
+        {
+          "command": "copyFilePath",
+          "when": "view == functionTreeView && viewItem == file",
+          "group": "3_copy"
+        },
+        {
+          "command": "copyRelativeFilePath",
+          "when": "view == functionTreeView && viewItem == file",
+          "group": "3_copy"
+        },
+        {
+          "command": "functionTree.renameFile",
+          "when": "view == functionTreeView && viewItem == file",
+          "group": "4_mod"
+        },
+        {
+          "command": "functionTree.deleteFile",
+          "when": "view == functionTreeView && viewItem == file",
+          "group": "4_mod"
+        },
+        {
+          "command": "revealFileInOS",
+          "when": "view == functionTreeView && viewItem == folder",
+          "group": "2_files"
+        },
+        {
+          "command": "copyFilePath",
+          "when": "view == functionTreeView && viewItem == folder",
+          "group": "3_copy"
+        },
+        {
+          "command": "copyRelativeFilePath",
+          "when": "view == functionTreeView && viewItem == folder",
+          "group": "3_copy"
+        },
+        {
+          "command": "functionTree.renameFile",
+          "when": "view == functionTreeView && viewItem == folder",
+          "group": "4_mod"
+        },
+        {
+          "command": "functionTree.deleteFile",
+          "when": "view == functionTreeView && viewItem == folder",
+          "group": "4_mod"
+        }
+      ]
+    },
     "configuration": {
       "title": "Function Tree",
       "properties": {
@@ -114,17 +211,18 @@
     }
   },
   "scripts": {
-  "bundle": "node bundle.js",
-  "vscode:prepublish": "npm run bundle",
-  "watch": "esbuild src/extension.ts --bundle --platform=node --external:vscode --outfile=out/extension.js --watch",
-  "tsc:watch": "tsc -watch -p ./",
-  "compile": "tsc -p ./"
-},
+    "bundle": "node bundle.js",
+    "vscode:prepublish": "npm run bundle",
+    "watch": "esbuild src/extension.ts --bundle --platform=node --external:vscode --outfile=out/extension.js --watch",
+    "tsc:watch": "tsc -watch -p ./",
+    "compile": "tsc -p ./"
+  },
   "devDependencies": {
     "@types/node": "^20.8.10",
     "@types/vscode": "^1.85.0",
     "esbuild": "^0.25.11",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "@vscode/codicons": "^0.0.36"
   },
   "dependencies": {
     "@vue/compiler-sfc": "^3.5.22",

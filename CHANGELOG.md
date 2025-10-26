@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.8] – 2025-10-26
+### 🧹 Context Menu Added & Safety Enhancements
+- Added Delete File/Folder command with a confirmation prompt to prevent accidental deletions.
+- Added Rename File/Folder command with validation and confirmation before applying changes.
+- Fixed missing context menu actions for files and folders in the Project + Functions Pane — all common file operations now work smoothly.
+- Polished internal command handling to ensure full compatibility with the VS Code API (no more “command not defined” errors).
+- Added codicons and now the refresh icon appears when you hover a  project folder, click it to refresh.
+
 ## [1.3.7] – 2025-10-22
 ### 🚀 Very Useful Update
 - Clicking on a file now opens it in the editor, just like in the normal File Explorer. This makes the **Project + Functions Pane** a practical replacement for the default Project Pane.

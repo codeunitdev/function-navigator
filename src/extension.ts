@@ -214,16 +214,16 @@ class JsTsParser implements LanguageParser {
       };
 
       const getLine = (posInSeg: number) => {
-  const pos = posInSeg;
-  const lc = sf.getLineAndCharacterOfPosition(pos);
+        const pos = posInSeg;
+        const lc = sf.getLineAndCharacterOfPosition(pos);
 
-  // 🧩 Correction: embedded <script> segments (e.g., in .svelte or .vue) often shift lines by +1
-  const isEmbedded = /<script/i.test(original);
-  const correction = isEmbedded ? 1 : 0;
+        // 🧩 Correction: embedded <script> segments (e.g., in .svelte or .vue) often shift lines by +1
+        const isEmbedded = /<script/i.test(original);
+        const correction = isEmbedded ? 1 : 0;
 
-  // sf.getLine... returns {line: 0-based ...}
-  return baseLine + lc.line - correction; // 1-based line in original content
-};
+        // sf.getLine... returns {line: 0-based ...}
+        return baseLine + lc.line - correction; // 1-based line in original content
+      };
 
 
 
@@ -327,7 +327,7 @@ class JsTsParser implements LanguageParser {
     return dedup as { name: string; line: number; parent?: string; type?: string }[];
   }
 
- 
+
 
   // --- Robust regex fallback (keeps your prior behavior) ---
   // This is adapted from your current implementation (keeps behavior stable).
@@ -523,33 +523,33 @@ class PythonParser implements LanguageParser {
 class ParserRegistry {
   private parsers: LanguageParser[] = [new PhpParser(), new JsTsParser(), new PythonParser()];
 
- getParser(languageId: string): LanguageParser | undefined {
-  // Direct match
-  if (languageId === 'javascript' || languageId === 'typescript') {
-    return this.parsers.find(parser => parser.languageId === 'javascript');
+  getParser(languageId: string): LanguageParser | undefined {
+    // Direct match
+    if (languageId === 'javascript' || languageId === 'typescript') {
+      return this.parsers.find(parser => parser.languageId === 'javascript');
+    }
+
+    // --- Vue integration ---
+    if (languageId === 'vue') {
+      const jsParser = this.parsers.find(parser => parser.languageId === 'javascript');
+      if (jsParser) return jsParser;
+    }
+
+    // --- Fallback aliases (React/Svelte, etc.) ---
+    const aliasMap: Record<string, string> = {
+      typescriptreact: 'javascript',
+      javascriptreact: 'javascript',
+      svelte: 'javascript',
+    };
+
+    const mapped = aliasMap[languageId];
+    if (mapped) {
+      return this.parsers.find(parser => parser.languageId === mapped);
+    }
+
+    // Default direct lookup
+    return this.parsers.find(parser => parser.languageId === languageId);
   }
-
-  // --- Vue integration ---
-  if (languageId === 'vue') {
-    const jsParser = this.parsers.find(parser => parser.languageId === 'javascript');
-    if (jsParser) return jsParser;
-  }
-
-  // --- Fallback aliases (React/Svelte, etc.) ---
-  const aliasMap: Record<string, string> = {
-    typescriptreact: 'javascript',
-    javascriptreact: 'javascript',
-    svelte: 'javascript',
-  };
-
-  const mapped = aliasMap[languageId];
-  if (mapped) {
-    return this.parsers.find(parser => parser.languageId === mapped);
-  }
-
-  // Default direct lookup
-  return this.parsers.find(parser => parser.languageId === languageId);
-}
 
 
 
@@ -604,7 +604,7 @@ class FunctionTreeDataProvider implements vscode.TreeDataProvider<vscode.Uri> {
     this.reloadSettings();
   }
 
-  
+
 
   /**
    * Public: reload settings from workspace config.
@@ -626,7 +626,7 @@ class FunctionTreeDataProvider implements vscode.TreeDataProvider<vscode.Uri> {
       console.warn('functionTree: failed to reload settings, keeping previous values', err);
     }
   }
-  
+
 
   /** Enforce LRU limit on parseCache; evict oldest entries when over limit. */
   private enforceCacheLimit() {
@@ -714,7 +714,7 @@ class FunctionTreeDataProvider implements vscode.TreeDataProvider<vscode.Uri> {
     let functions: { name: string; line: number; parent?: string; type?: string }[] = [];
     if (!parser) {
       // no parser for this language — cache empty result
-      try { this.parseCache.set(key, { version: document.version, functions: [] }); } catch {}
+      try { this.parseCache.set(key, { version: document.version, functions: [] }); } catch { }
       this.enforceCacheLimit();
       return [];
     }
@@ -764,7 +764,8 @@ class FunctionTreeDataProvider implements vscode.TreeDataProvider<vscode.Uri> {
           command: 'functionTree.navigateToFunction',
           title: 'Go to Function',
           arguments: [vscode.Uri.file(filePath), line]
-        }
+        },
+        contextValue: 'function' // 👈 add this
       };
     }
 
@@ -776,7 +777,8 @@ class FunctionTreeDataProvider implements vscode.TreeDataProvider<vscode.Uri> {
           label: path.basename(element.fsPath),
           resourceUri: element,
           collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
-          iconPath: vscode.ThemeIcon.Folder
+          iconPath: vscode.ThemeIcon.Folder,
+          contextValue: 'folder' // 👈 add this
         };
       }
     } catch (e) {
@@ -784,46 +786,35 @@ class FunctionTreeDataProvider implements vscode.TreeDataProvider<vscode.Uri> {
     }
 
     // File node
+    // Determine if file has functions
+    let functions: { name: string; line: number }[] = [];
+    try {
+      const ext = path.extname(element.fsPath).toLowerCase().slice(1);
+      const supported = this.parserRegistry.getSupportedExtensions();
+      if (supported.includes(ext)) {
+        const document = await vscode.workspace.openTextDocument(element);
+        functions = await this.parseDocument(document);
+      }
+    } catch (e) {
+      console.error('Error checking functions for file:', element.fsPath, e);
+    }
 
-    //This puts > on all files
-    /*
+    const hasChildren = functions.length > 0;
+
     return {
       label: path.basename(element.fsPath),
       resourceUri: element,
-      collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
-      iconPath: vscode.ThemeIcon.File
+      collapsibleState: hasChildren
+        ? vscode.TreeItemCollapsibleState.Collapsed
+        : vscode.TreeItemCollapsibleState.None,
+      iconPath: vscode.ThemeIcon.File,
+      command: {
+        command: 'vscode.open',
+        title: 'Open File',
+        arguments: [element]
+      },
+      contextValue: 'file' // 👈 add this
     };
-    repleced by the code below to put > only for files with childs
-    */
-   //replaces the above code
-   // Determine if file has functions
-let functions: { name: string; line: number }[] = [];
-try {
-  const ext = path.extname(element.fsPath).toLowerCase().slice(1);
-  const supported = this.parserRegistry.getSupportedExtensions();
-  if (supported.includes(ext)) {
-    const document = await vscode.workspace.openTextDocument(element);
-    functions = await this.parseDocument(document);
-  }
-} catch (e) {
-  console.error('Error checking functions for file:', element.fsPath, e);
-}
-
-const hasChildren = functions.length > 0;
-
-return {
-  label: path.basename(element.fsPath),
-  resourceUri: element,
-  collapsibleState: hasChildren 
-    ? vscode.TreeItemCollapsibleState.Collapsed 
-    : vscode.TreeItemCollapsibleState.None,
-  iconPath: vscode.ThemeIcon.File,
-  command: {
-    command: 'vscode.open',
-    title: 'Open File',
-    arguments: [element]
-  }
-};
 
 
 
@@ -912,7 +903,7 @@ return {
       });
 
       //return functionUris;
-      
+
       // 🟢 NEW: return [] if there are no functions, to hide toggle (>)
       return functionUris.length > 0 ? functionUris : [];
     } catch (e) {
@@ -920,176 +911,13 @@ return {
       return [];
     }
   }
+
+
+
+
 }
 
 
-
-
-export function activate1(context: vscode.ExtensionContext) {
-  try {
-    console.log('Function Tree extension activated');
-    const parserRegistry = new ParserRegistry();
-    const treeProvider = new FunctionTreeDataProvider();
-    treeProvider.reloadSettings?.(); // ensure initial settings read (constructor already does this, but harmless)
-
-
-    // Register TreeDataProvider for the Function Tree view
-    context.subscriptions.push(
-      vscode.window.createTreeView('functionTreeView', { treeDataProvider: treeProvider })
-    );
-
-    // Register FileDecorationProvider to mark PHP files with functions
-    context.subscriptions.push(
-      vscode.window.registerFileDecorationProvider({
-        provideFileDecoration: async (uri: vscode.Uri) => {
-          if (!(uri instanceof vscode.Uri) || !uri.fsPath || uri.fsPath === '\\') {
-            console.log('Invalid URI for decoration:', JSON.stringify(uri));
-            return undefined;
-          }
-          const ext = path.extname(uri.fsPath).toLowerCase().slice(1);
-          if (parserRegistry.getSupportedExtensions().includes(ext)) {
-            try {
-              const document = await vscode.workspace.openTextDocument(uri);
-              const parser = parserRegistry.getParser(document.languageId);
-              if (parser && parser.parse(document.getText()).length > 0) {
-                console.log('Decorating file with functions:', uri.fsPath);
-                return {
-                  badge: 'F',
-                  tooltip: 'Contains functions',
-                  propagate: false
-                };
-              }
-              console.log('No functions in file:', uri.fsPath);
-            } catch (e) {
-              console.error('Error checking functions for decoration:', uri.fsPath, e);
-            }
-          }
-          return undefined;
-        }
-      })
-    );
-
-    // Register commands
-    context.subscriptions.push(
-      vscode.commands.registerCommand('functionTree.navigateToFunction', async (uri: vscode.Uri, line?: number) => {
-        try {
-          console.log('Navigating to:', uri.toString(), 'line:', line);
-          const fileUri = uri.path.includes('@') ? vscode.Uri.file(uri.path.split('@')[0]) : uri;
-          const document = await vscode.workspace.openTextDocument(fileUri);
-          const editor = await vscode.window.showTextDocument(document);
-          if (line !== undefined) {
-            const position = new vscode.Position(line, 0);
-            editor.selection = new vscode.Selection(position, position);
-            editor.revealRange(new vscode.Range(position, position));
-          }
-        } catch (error) {
-          vscode.window.showErrorMessage('Error navigating to function');
-          console.error(error);
-        }
-      }),
-      vscode.commands.registerCommand('functionTree.refresh', () => {
-        console.log('Refresh command triggered');
-        treeProvider.refresh();
-      }),
-      vscode.commands.registerCommand('functionTree.debugTree', async () => {
-        try {
-          console.log('Debugging Function Tree');
-          const rootItems = await treeProvider.getChildren();
-          console.log('Root items:', rootItems.map(f => f.toString()));
-          for (const item of rootItems) {
-            try {
-              const stat = await vscode.workspace.fs.stat(item);
-              if (stat.type === vscode.FileType.Directory) {
-                console.log('Directory:', item.fsPath);
-                const children = await treeProvider.getChildren(item);
-                console.log('Children for:', item.fsPath, children.map(c => c.toString()));
-              } else {
-                console.log('File:', item.fsPath);
-                const children = await treeProvider.getChildren(item);
-                console.log('Functions for:', item.fsPath, children.map(c => c.toString()));
-              }
-            } catch (e) {
-              console.error('Error checking stat for:', item.fsPath, e);
-            }
-          }
-          vscode.window.showInformationMessage('Function Tree debug info logged to console');
-        } catch (error) {
-          console.error('Error debugging tree:', error);
-          vscode.window.showErrorMessage('Error debugging Function Tree');
-        }
-      })
-    );
-
-    // File watcher for supported extensions
-    const extensions = parserRegistry.getSupportedExtensions();
-    console.log('File watcher extensions:', extensions);
-    if (extensions.length > 0) {
-      const watcher = vscode.workspace.createFileSystemWatcher(
-        `**/*.{${extensions.join(',')}}`
-      );
-      watcher.onDidChange(uri => {
-        console.log('File changed:', uri.fsPath);
-        treeProvider.refresh(uri);
-      });
-      watcher.onDidCreate(uri => {
-        console.log('File created:', uri.fsPath);
-        treeProvider.refresh(uri);
-      });
-      watcher.onDidDelete(uri => {
-        console.log('File deleted:', uri.fsPath);
-        treeProvider.refresh();
-      });
-      context.subscriptions.push(watcher);
-    }
-
-    // Refresh on configuration or text document changes
-    context.subscriptions.push(
-
-      vscode.workspace.onDidChangeConfiguration(e => {
-  if (e.affectsConfiguration('functionTree')) {
-    console.log('Configuration changed, reloading functionTree settings and refreshing');
-    try {
-      (treeProvider as any).reloadSettings?.();
-    } catch (err) {
-      console.error('Error reloading settings on config change', err);
-    }
-    treeProvider.refresh();
-  }
-})
-
-           /* vscode.workspace.onDidChangeConfiguration(e => {
-        if (e.affectsConfiguration('functionTree')) {
-          console.log('Configuration changed, refreshing');
-          treeProvider.refresh();
-        }
-      })*/,
-      vscode.workspace.onDidChangeTextDocument(e => {
-        // Debounced refresh + cache usage handled by treeProvider
-        try {
-          if (e && e.document) {
-            console.log('Text document changed (scheduling):', e.document.uri.fsPath);
-            treeProvider.scheduleRefreshForDocument(e.document);
-          }
-        } catch (err) {
-          console.error('Error scheduling refresh for changed document:', err);
-        }
-      }),
-      // Clear caches for closed documents (manual invalidation)
-      vscode.workspace.onDidCloseTextDocument(doc => {
-        try {
-          console.log('Document closed, clearing cache:', doc.uri.fsPath);
-          treeProvider.handleDocumentClosed(doc);
-        } catch (err) {
-          console.error('Error handling closed document:', err);
-        }
-      })
-
-    );
-  } catch (error) {
-    console.error('Error activating Function Tree extension:', error);
-    vscode.window.showErrorMessage('Error activating Function Tree extension');
-  }
-}
 export function activate(context: vscode.ExtensionContext) {
   try {
     console.log('Function Tree extension activated');
@@ -1157,8 +985,124 @@ export function activate(context: vscode.ExtensionContext) {
           console.error('Error debugging tree:', err);
           vscode.window.showErrorMessage('Error debugging Function Tree');
         }
-      })
-    );
+      }),
+
+      // ✅ custom delete command
+      vscode.commands.registerCommand('functionTree.deleteFile', async (uri: vscode.Uri) => {
+        const isDir = (await vscode.workspace.fs.stat(uri)).type === vscode.FileType.Directory;
+
+        const confirm = await vscode.window.showWarningMessage(
+          `Are you sure you want to delete ${isDir ? 'folder' : 'file'} "${path.basename(uri.fsPath)}"${isDir ? ' and all its contents?' : '?'
+          }`,
+          { modal: true },
+          'Yes', 'Cancel'
+        );
+
+        if (confirm !== 'Yes') {
+          vscode.window.showInformationMessage('Deletion cancelled.');
+          return;
+        }
+
+        try {
+          await vscode.workspace.fs.delete(uri, { recursive: isDir });
+          vscode.window.showInformationMessage(`Deleted ${isDir ? 'folder' : 'file'}: ${uri.fsPath}`);
+        } catch (err) {
+          vscode.window.showErrorMessage(`Failed to delete: ${uri.fsPath}`);
+          console.error(err);
+        }
+      }),
+
+      /* vscode.commands.registerCommand('functionTree.deleteFile', async (uri: vscode.Uri) => {
+         try {
+           await vscode.workspace.fs.delete(uri, { recursive: false });
+           vscode.window.showInformationMessage(`Deleted: ${uri.fsPath}`);
+         } catch (err) {
+           vscode.window.showErrorMessage(`Failed to delete: ${uri.fsPath}`);
+           console.error(err);
+         }
+       }),*/
+      /*vscode.commands.registerCommand('functionTree.deleteFile', async (uri: vscode.Uri) => {
+      const confirm = await vscode.window.showWarningMessage(
+        `Are you sure you want to delete "${path.basename(uri.fsPath)}"?`,
+        { modal: true },
+        'Yes', 'Cancel'
+      );
+    
+      if (confirm !== 'Yes') {
+        vscode.window.showInformationMessage('File deletion cancelled.');
+        return;
+      }
+    
+      try {
+        await vscode.workspace.fs.delete(uri, { recursive: false });
+        vscode.window.showInformationMessage(`Deleted: ${uri.fsPath}`);
+      } catch (err) {
+        vscode.window.showErrorMessage(`Failed to delete: ${uri.fsPath}`);
+        console.error(err);
+      }
+      }),*/
+
+
+      // ✅ custom rename command
+      /*vscode.commands.registerCommand('functionTree.renameFile', async (uri: vscode.Uri) => {
+        const newName = await vscode.window.showInputBox({
+          prompt: 'Enter new file name',
+          value: path.basename(uri.fsPath)
+        });
+        if (!newName) return;
+        const newUri = vscode.Uri.joinPath(vscode.Uri.file(path.dirname(uri.fsPath)), newName);
+        try {
+          await vscode.workspace.fs.rename(uri, newUri);
+          vscode.window.showInformationMessage(`Renamed to: ${newName}`);
+        } catch (err) {
+          vscode.window.showErrorMessage(`Failed to rename: ${uri.fsPath}`);
+          console.error(err);
+        }
+      })*/
+
+        vscode.commands.registerCommand('functionTree.renameFile', async (uri: vscode.Uri) => {
+  const isDir = (await vscode.workspace.fs.stat(uri)).type === vscode.FileType.Directory;
+  const oldName = path.basename(uri.fsPath);
+
+  const newName = await vscode.window.showInputBox({
+    prompt: `Enter new ${isDir ? 'folder' : 'file'} name`,
+    value: oldName,
+    validateInput: (value) => {
+      if (!value.trim()) return 'Name cannot be empty';
+      if (value.includes('/') || value.includes('\\')) return 'Name cannot contain path separators';
+      return null;
+    }
+  });
+
+  if (!newName || newName === oldName) {
+    vscode.window.showInformationMessage('Rename cancelled.');
+    return;
+  }
+
+  const newUri = vscode.Uri.joinPath(vscode.Uri.file(path.dirname(uri.fsPath)), newName);
+
+  // Confirm rename
+  const confirm = await vscode.window.showInformationMessage(
+    `Rename ${isDir ? 'folder' : 'file'} "${oldName}" → "${newName}"?`,
+    { modal: true },
+    'Yes', 'Cancel'
+  );
+
+  if (confirm !== 'Yes') {
+    vscode.window.showInformationMessage('Rename cancelled.');
+    return;
+  }
+
+  try {
+    await vscode.workspace.fs.rename(uri, newUri, { overwrite: false });
+    vscode.window.showInformationMessage(`Renamed ${isDir ? 'folder' : 'file'} to: ${newName}`);
+  } catch (err) {
+    vscode.window.showErrorMessage(`Failed to rename: ${uri.fsPath}`);
+    console.error(err);
+  }
+})
+
+    );//subscription end
 
     // Watcher for supported extensions
     const extensions = parserRegistry.getSupportedExtensions();
