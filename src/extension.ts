@@ -954,6 +954,7 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Commands
     context.subscriptions.push(
+
       vscode.commands.registerCommand('functionTree.navigateToFunction', async (uri: vscode.Uri, line?: number) => {
         try {
           const fileUri = uri.path.includes('@') ? vscode.Uri.file(uri.path.split('@')[0]) : uri;
@@ -1012,95 +1013,482 @@ export function activate(context: vscode.ExtensionContext) {
         }
       }),
 
-      /* vscode.commands.registerCommand('functionTree.deleteFile', async (uri: vscode.Uri) => {
-         try {
-           await vscode.workspace.fs.delete(uri, { recursive: false });
-           vscode.window.showInformationMessage(`Deleted: ${uri.fsPath}`);
-         } catch (err) {
-           vscode.window.showErrorMessage(`Failed to delete: ${uri.fsPath}`);
-           console.error(err);
-         }
-       }),*/
-      /*vscode.commands.registerCommand('functionTree.deleteFile', async (uri: vscode.Uri) => {
-      const confirm = await vscode.window.showWarningMessage(
-        `Are you sure you want to delete "${path.basename(uri.fsPath)}"?`,
-        { modal: true },
-        'Yes', 'Cancel'
-      );
-    
-      if (confirm !== 'Yes') {
-        vscode.window.showInformationMessage('File deletion cancelled.');
-        return;
-      }
-    
-      try {
-        await vscode.workspace.fs.delete(uri, { recursive: false });
-        vscode.window.showInformationMessage(`Deleted: ${uri.fsPath}`);
-      } catch (err) {
-        vscode.window.showErrorMessage(`Failed to delete: ${uri.fsPath}`);
-        console.error(err);
-      }
-      }),*/
-
-
       // ✅ custom rename command
-      /*vscode.commands.registerCommand('functionTree.renameFile', async (uri: vscode.Uri) => {
+      vscode.commands.registerCommand('functionTree.renameFile', async (uri: vscode.Uri) => {
+        const isDir = (await vscode.workspace.fs.stat(uri)).type === vscode.FileType.Directory;
+        const oldName = path.basename(uri.fsPath);
+
         const newName = await vscode.window.showInputBox({
-          prompt: 'Enter new file name',
-          value: path.basename(uri.fsPath)
+          prompt: `Enter new ${isDir ? 'folder' : 'file'} name`,
+          value: oldName,
+          validateInput: (value) => {
+            if (!value.trim()) return 'Name cannot be empty';
+            if (value.includes('/') || value.includes('\\')) return 'Name cannot contain path separators';
+            return null;
+          }
         });
-        if (!newName) return;
+
+        if (!newName || newName === oldName) {
+          vscode.window.showInformationMessage('Rename cancelled.');
+          return;
+        }
+
         const newUri = vscode.Uri.joinPath(vscode.Uri.file(path.dirname(uri.fsPath)), newName);
+
+        // Confirm rename
+        const confirm = await vscode.window.showInformationMessage(
+          `Rename ${isDir ? 'folder' : 'file'} "${oldName}" → "${newName}"?`,
+          { modal: true },
+          'Yes', 'Cancel'
+        );
+
+        if (confirm !== 'Yes') {
+          vscode.window.showInformationMessage('Rename cancelled.');
+          return;
+        }
+
         try {
-          await vscode.workspace.fs.rename(uri, newUri);
-          vscode.window.showInformationMessage(`Renamed to: ${newName}`);
+          await vscode.workspace.fs.rename(uri, newUri, { overwrite: false });
+          vscode.window.showInformationMessage(`Renamed ${isDir ? 'folder' : 'file'} to: ${newName}`);
         } catch (err) {
           vscode.window.showErrorMessage(`Failed to rename: ${uri.fsPath}`);
           console.error(err);
         }
+      }),
+
+      // ✅ New File
+      vscode.commands.registerCommand('functionTree.newFile', async (uri: vscode.Uri) => {
+        try {
+          const baseDir = (await vscode.workspace.fs.stat(uri)).type === vscode.FileType.Directory
+            ? uri
+            : vscode.Uri.file(path.dirname(uri.fsPath));
+
+          const fileName = await vscode.window.showInputBox({
+            prompt: 'Enter new file name',
+            placeHolder: 'example.js',
+            validateInput: (value) => {
+              if (!value.trim()) return 'File name cannot be empty';
+              if (value.includes('/') || value.includes('\\')) return 'Invalid file name';
+              return null;
+            },
+          });
+          if (!fileName) return;
+
+          const newFileUri = vscode.Uri.joinPath(baseDir, fileName);
+
+          // Check if already exists
+          try {
+            await vscode.workspace.fs.stat(newFileUri);
+            vscode.window.showErrorMessage('File already exists.');
+            return;
+          } catch { }
+
+          await vscode.workspace.fs.writeFile(newFileUri, new TextEncoder().encode(''));
+          vscode.window.showTextDocument(newFileUri);
+          vscode.window.showInformationMessage(`Created file: ${fileName}`);
+        } catch (err) {
+          console.error('Error creating file:', err);
+          vscode.window.showErrorMessage('Failed to create file.');
+        }
+      }),
+
+      // ✅ New Folder
+      vscode.commands.registerCommand('functionTree.newFolder', async (uri: vscode.Uri) => {
+        try {
+          const baseDir = (await vscode.workspace.fs.stat(uri)).type === vscode.FileType.Directory
+            ? uri
+            : vscode.Uri.file(path.dirname(uri.fsPath));
+
+          const folderName = await vscode.window.showInputBox({
+            prompt: 'Enter new folder name',
+            placeHolder: 'new-folder',
+            validateInput: (value) => {
+              if (!value.trim()) return 'Folder name cannot be empty';
+              if (value.includes('/') || value.includes('\\')) return 'Invalid folder name';
+              return null;
+            },
+          });
+          if (!folderName) return;
+
+          const newFolderUri = vscode.Uri.joinPath(baseDir, folderName);
+
+          try {
+            await vscode.workspace.fs.stat(newFolderUri);
+            vscode.window.showErrorMessage('Folder already exists.');
+            return;
+          } catch { }
+
+          await vscode.workspace.fs.createDirectory(newFolderUri);
+          vscode.window.showInformationMessage(`Created folder: ${folderName}`);
+        } catch (err) {
+          console.error('Error creating folder:', err);
+          vscode.window.showErrorMessage('Failed to create folder.');
+        }
+      }),
+
+      // ✅ Open in Integrated Terminal (Shift+Alt+R)
+      vscode.commands.registerCommand('functionTree.openInTerminal', async (uri: vscode.Uri) => {
+        try {
+          const dir = (await vscode.workspace.fs.stat(uri)).type === vscode.FileType.Directory
+            ? uri.fsPath
+            : path.dirname(uri.fsPath);
+
+          const terminal = vscode.window.createTerminal({ cwd: dir });
+          terminal.show();
+          vscode.window.showInformationMessage(`Opened terminal at: ${dir}`);
+        } catch (err) {
+          console.error('Error opening terminal:', err);
+          vscode.window.showErrorMessage('Failed to open terminal.');
+        }
+      }),
+
+      // ✅ Cut File/Folder (Ctrl+X)
+      vscode.commands.registerCommand('functionTree.cutFile', async (uri: vscode.Uri) => {
+        try {
+          // Store temporarily in context globalState for "Paste" command
+          context.workspaceState.update('functionTree.cutSource', uri);
+          context.workspaceState.update('functionTree.copySource', undefined); // clear any previous copy
+          vscode.window.showInformationMessage(`Ready to move: ${path.basename(uri.fsPath)}`);
+        } catch (err) {
+          console.error('Error cutting file:', err);
+          vscode.window.showErrorMessage('Failed to cut file.');
+        }
+      }),
+
+      // ✅ Copy File/Folder (Ctrl+C)
+vscode.commands.registerCommand('functionTree.copyFile', async (uri: vscode.Uri) => {
+  try {
+    const stat = await vscode.workspace.fs.stat(uri);
+    const type = stat.type === vscode.FileType.Directory ? 'folder' : 'file';
+
+    context.workspaceState.update('functionTree.copySource', { uri, type });
+    vscode.window.showInformationMessage(`Copied ${type}: ${path.basename(uri.fsPath)}`);
+  } catch (err) {
+    console.error('Error copying file/folder:', err);
+    vscode.window.showErrorMessage('Failed to copy file/folder.');
+  }
+}),
+
+
+// ✅ Paste File/Folder (Ctrl+V)
+vscode.commands.registerCommand('functionTree.pasteFile', async (uri: vscode.Uri) => {
+  try {
+    const cutSource: vscode.Uri | undefined = context.workspaceState.get('functionTree.cutSource');
+    const copySource: { uri: vscode.Uri; type: 'file' | 'folder' } | undefined = context.workspaceState.get('functionTree.copySource');
+    
+
+
+    const source = cutSource || copySource?.uri;
+    if (!source) {
+      vscode.window.showWarningMessage('Nothing to paste.');
+      return;
+    }
+
+    const isCopy = !!copySource;
+    const sourceType: 'file' | 'folder' = copySource?.type || 'file';
+    const targetDir =
+      (await vscode.workspace.fs.stat(uri)).type === vscode.FileType.Directory
+        ? uri.fsPath
+        : path.dirname(uri.fsPath);
+
+    const baseName = path.basename(source.fsPath);
+    let destination = vscode.Uri.joinPath(vscode.Uri.file(targetDir), baseName);
+
+    // 🧩 Auto-rename if copying to avoid overwrite
+    if (isCopy) {
+      let counter = 1;
+      while (true) {
+        try {
+          await vscode.workspace.fs.stat(destination);
+          destination = vscode.Uri.joinPath(
+            vscode.Uri.file(targetDir),
+            `${path.basename(baseName, path.extname(baseName))}_copy${counter}${path.extname(baseName)}`
+          );
+          counter++;
+        } catch {
+          break;
+        }
+      }
+    } else {
+      // 🧩 Confirm overwrite if moving
+      try {
+        await vscode.workspace.fs.stat(destination);
+        const confirm = await vscode.window.showWarningMessage(
+          `A file/folder named "${baseName}" already exists. Overwrite?`,
+          { modal: true },
+          'Yes',
+          'No'
+        );
+        if (confirm !== 'Yes') return;
+      } catch {
+        // OK to move
+      }
+    }
+
+    // 🗂 Copy or move files/folders
+    if (isCopy) {
+      if (sourceType === 'file') {
+        const fileData = await vscode.workspace.fs.readFile(source);
+        await vscode.workspace.fs.writeFile(destination, fileData);
+      } else {
+        // Folder copy: recursive function
+        const copyFolderRecursive = async (src: vscode.Uri, dest: vscode.Uri) => {
+          await vscode.workspace.fs.createDirectory(dest);
+          const items = await vscode.workspace.fs.readDirectory(src);
+          for (const [name, type] of items) {
+            const srcChild = vscode.Uri.joinPath(src, name);
+            const destChild = vscode.Uri.joinPath(dest, name);
+            if (type === vscode.FileType.Directory) {
+              await copyFolderRecursive(srcChild, destChild);
+            } else {
+              const data = await vscode.workspace.fs.readFile(srcChild);
+              await vscode.workspace.fs.writeFile(destChild, data);
+            }
+          }
+        };
+        await copyFolderRecursive(source, destination);
+      }
+      vscode.window.showInformationMessage(`Copied ${sourceType} to: ${destination.fsPath}`);
+    } else {
+      await vscode.workspace.fs.rename(source, destination, { overwrite: true });
+      vscode.window.showInformationMessage(`Moved ${baseName} to: ${destination.fsPath}`);
+    }
+
+    // 🧹 Clear cut/copy state
+    context.workspaceState.update('functionTree.cutSource', undefined);
+    if (!isCopy) context.workspaceState.update('functionTree.copySource', undefined);
+
+    treeProvider.refresh?.();
+  } catch (err) {
+    console.error('Error pasting file/folder:', err);
+    vscode.window.showErrorMessage('Failed to paste file/folder.');
+  }
+}),
+
+      // ✅ Paste File/Folder (Ctrl+V) — supports recursive folder copy
+      /*vscode.commands.registerCommand('functionTree.pasteFile', async (uri: vscode.Uri) => {
+        try {
+          const cutSource: vscode.Uri | undefined = context.workspaceState.get('functionTree.cutSource');
+          const copySource: vscode.Uri | undefined = context.workspaceState.get('functionTree.copySource');
+          const source = cutSource || copySource;
+
+          if (!source) {
+            vscode.window.showWarningMessage('Nothing to paste.');
+            return;
+          }
+
+          const isCopy = !!copySource;
+          const targetDir =
+            (await vscode.workspace.fs.stat(uri)).type === vscode.FileType.Directory
+              ? uri.fsPath
+              : path.dirname(uri.fsPath);
+
+          const baseName = path.basename(source.fsPath);
+          let destination = vscode.Uri.joinPath(vscode.Uri.file(targetDir), baseName);
+
+          // 🧩 Auto-rename for copies
+          if (isCopy) {
+            let counter = 1;
+            while (true) {
+              try {
+                await vscode.workspace.fs.stat(destination);
+                const ext = path.extname(baseName);
+                const nameWithoutExt = path.basename(baseName, ext);
+                destination = vscode.Uri.joinPath(
+                  vscode.Uri.file(targetDir),
+                  source.fsPath.endsWith(path.sep)
+                    ? `${baseName}_copy${counter}`
+                    : `${nameWithoutExt}_copy${counter}${ext}`
+                );
+                counter++;
+              } catch {
+                break;
+              }
+            }
+          } else {
+            // 🧩 Confirm overwrite for move
+            try {
+              await vscode.workspace.fs.stat(destination);
+              const confirm = await vscode.window.showWarningMessage(
+                `A file/folder named "${baseName}" already exists. Overwrite?`,
+                { modal: true },
+                'Yes',
+                'No'
+              );
+              if (confirm !== 'Yes') return;
+            } catch {
+              // OK to move
+            }
+          }
+
+          // Recursive copy helper
+          async function copyRecursive(src: vscode.Uri, dest: vscode.Uri) {
+            const stat = await vscode.workspace.fs.stat(src);
+            if (stat.type === vscode.FileType.File) {
+              const data = await vscode.workspace.fs.readFile(src);
+              await vscode.workspace.fs.writeFile(dest, data);
+            } else if (stat.type === vscode.FileType.Directory) {
+              await vscode.workspace.fs.createDirectory(dest);
+              const entries = await vscode.workspace.fs.readDirectory(src);
+              for (const [name] of entries) {
+                await copyRecursive(
+                  vscode.Uri.joinPath(src, name),
+                  vscode.Uri.joinPath(dest, name)
+                );
+              }
+            }
+          }
+
+          if (isCopy) {
+            await copyRecursive(source, destination);
+            vscode.window.showInformationMessage(`Copied to: ${destination.fsPath}`);
+          } else {
+            await vscode.workspace.fs.rename(source, destination, { overwrite: true });
+            vscode.window.showInformationMessage(`Moved to: ${destination.fsPath}`);
+          }
+
+          // 🧹 Clear cut state after paste
+          context.workspaceState.update('functionTree.cutSource', undefined);
+          if (!isCopy) context.workspaceState.update('functionTree.copySource', undefined);
+
+          treeProvider.refresh?.();
+        } catch (err) {
+          console.error('Error pasting file/folder:', err);
+          vscode.window.showErrorMessage('Failed to paste file/folder.');
+        }
       })*/
 
-        vscode.commands.registerCommand('functionTree.renameFile', async (uri: vscode.Uri) => {
-  const isDir = (await vscode.workspace.fs.stat(uri)).type === vscode.FileType.Directory;
-  const oldName = path.basename(uri.fsPath);
+      // ✅ Paste File/Folder (Ctrl+V)
+      /*vscode.commands.registerCommand('functionTree.pasteFile', async (uri: vscode.Uri) => {
+        try {
+          const cutSource: vscode.Uri | undefined = context.workspaceState.get('functionTree.cutSource');
+          const copySource: vscode.Uri | undefined = context.workspaceState.get('functionTree.copySource');
+          const source = cutSource || copySource;
 
-  const newName = await vscode.window.showInputBox({
-    prompt: `Enter new ${isDir ? 'folder' : 'file'} name`,
-    value: oldName,
-    validateInput: (value) => {
-      if (!value.trim()) return 'Name cannot be empty';
-      if (value.includes('/') || value.includes('\\')) return 'Name cannot contain path separators';
-      return null;
-    }
-  });
+          if (!source) {
+            vscode.window.showWarningMessage('Nothing to paste.');
+            return;
+          }
 
-  if (!newName || newName === oldName) {
-    vscode.window.showInformationMessage('Rename cancelled.');
-    return;
-  }
+          const isCopy = !!copySource;
+          const targetDir =
+            (await vscode.workspace.fs.stat(uri)).type === vscode.FileType.Directory
+              ? uri.fsPath
+              : path.dirname(uri.fsPath);
 
-  const newUri = vscode.Uri.joinPath(vscode.Uri.file(path.dirname(uri.fsPath)), newName);
+          const baseName = path.basename(source.fsPath);
+          let destination = vscode.Uri.joinPath(vscode.Uri.file(targetDir), baseName);
 
-  // Confirm rename
-  const confirm = await vscode.window.showInformationMessage(
-    `Rename ${isDir ? 'folder' : 'file'} "${oldName}" → "${newName}"?`,
-    { modal: true },
-    'Yes', 'Cancel'
-  );
+          // 🧩 If copying, auto-rename to avoid overwrite
+          if (isCopy) {
+            let counter = 1;
+            while (true) {
+              try {
+                await vscode.workspace.fs.stat(destination);
+                const ext = path.extname(baseName);
+                const nameWithoutExt = path.basename(baseName, ext);
+                destination = vscode.Uri.joinPath(
+                  vscode.Uri.file(targetDir),
+                  `${nameWithoutExt}_copy${counter}${ext}`
+                );
+                counter++;
+              } catch {
+                break;
+              }
+            }
+          } else {
+            // 🧩 Confirm overwrite if file already exists on move
+            try {
+              await vscode.workspace.fs.stat(destination);
+              const confirm = await vscode.window.showWarningMessage(
+                `A file named "${baseName}" already exists. Overwrite?`,
+                { modal: true },
+                'Yes',
+                'No'
+              );
+              if (confirm !== 'Yes') return;
+            } catch {
+              // OK to move
+            }
+          }
 
-  if (confirm !== 'Yes') {
-    vscode.window.showInformationMessage('Rename cancelled.');
-    return;
-  }
+          if (isCopy) {
+            const fileData = await vscode.workspace.fs.readFile(source);
+            await vscode.workspace.fs.writeFile(destination, fileData);
+            vscode.window.showInformationMessage(`Copied to: ${destination.fsPath}`);
+          } else {
+            await vscode.workspace.fs.rename(source, destination, { overwrite: true });
+            vscode.window.showInformationMessage(`Moved to: ${destination.fsPath}`);
+          }
 
-  try {
-    await vscode.workspace.fs.rename(uri, newUri, { overwrite: false });
-    vscode.window.showInformationMessage(`Renamed ${isDir ? 'folder' : 'file'} to: ${newName}`);
-  } catch (err) {
-    vscode.window.showErrorMessage(`Failed to rename: ${uri.fsPath}`);
-    console.error(err);
-  }
-})
+          // 🧹 Clear cut state after paste
+          context.workspaceState.update('functionTree.cutSource', undefined);
+          if (!isCopy) context.workspaceState.update('functionTree.copySource', undefined);
+
+          treeProvider.refresh?.();
+        } catch (err) {
+          console.error('Error pasting file:', err);
+          vscode.window.showErrorMessage('Failed to paste file/folder.');
+        }
+      }),*/
+
+
+
+      // ✅ Copy File/Folder Path (Ctrl+C) ?
+      /*vscode.commands.registerCommand('functionTree.copyFilePath', async (uri: vscode.Uri) => {
+        try {
+          await vscode.env.clipboard.writeText(uri.fsPath);
+          vscode.window.showInformationMessage(`Copied path: ${uri.fsPath}`);
+        } catch (err) {
+          console.error('Error copying file path:', err);
+          vscode.window.showErrorMessage('Failed to copy file path.');
+        }
+      }),*/
+
+      // ✅ Paste File/Folder (Ctrl+V)
+      /*vscode.commands.registerCommand('functionTree.pasteFile', async (uri: vscode.Uri) => {
+        try {
+          const cutSource: vscode.Uri | undefined = context.workspaceState.get('functionTree.cutSource');
+          if (!cutSource) {
+            vscode.window.showWarningMessage('Nothing to paste.');
+            return;
+          }
+
+          const targetDir =
+            (await vscode.workspace.fs.stat(uri)).type === vscode.FileType.Directory
+              ? uri.fsPath
+              : path.dirname(uri.fsPath);
+
+          const destination = vscode.Uri.joinPath(vscode.Uri.file(targetDir), path.basename(cutSource.fsPath));
+
+          // Confirm overwrite if file already exists
+          let overwrite = false;
+          try {
+            await vscode.workspace.fs.stat(destination);
+            const confirm = await vscode.window.showWarningMessage(
+              `A file named "${path.basename(destination.fsPath)}" already exists. Overwrite?`,
+              { modal: true },
+              'Yes',
+              'No'
+            );
+            if (confirm !== 'Yes') return;
+            overwrite = true;
+          } catch {
+            // File does not exist — safe to move
+          }
+
+          await vscode.workspace.fs.rename(cutSource, destination, { overwrite });
+          context.workspaceState.update('functionTree.cutSource', undefined);
+          vscode.window.showInformationMessage(`Moved to: ${destination.fsPath}`);
+
+          treeProvider.refresh?.();
+        } catch (err) {
+          console.error('Error pasting file:', err);
+          vscode.window.showErrorMessage('Failed to paste file/folder.');
+        }
+      })*/
+
+
 
     );//subscription end
 

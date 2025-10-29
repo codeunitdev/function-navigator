@@ -2,7 +2,7 @@
   "name": "function-tree",
   "displayName": "Functions Navigator",
   "description": "Instantly browse, filter, and navigate functions in PHP, JavaScript, TypeScript, Python, Vue, and Svelte files with a sleek Function Navigator view in Explorer.",
-  "version": "1.3.8",
+  "version": "1.3.9",
   "icon": "icon.png",
   "license": "MIT",
   "publisher": "CodeUnit-TL",
@@ -81,9 +81,12 @@
         "icon": "$(debug-alt)"
       },
       {
-        "command": "vscode.open",
-        "title": "Open File"
-        
+        "command": "functionTree.newFile",
+        "title": "New File..."
+      },
+      {
+        "command": "functionTree.newFolder",
+        "title": "New Folder..."
       },
       {
         "command": "revealFileInOS",
@@ -104,6 +107,26 @@
       {
         "command": "functionTree.deleteFile",
         "title": "Delete File"
+      },
+      {
+        "command": "functionTree.openInTerminal",
+        "title": "Open in Integrated Terminal"
+      },
+      {
+        "command": "functionTree.copyFilePath",
+        "title": "Copy Path"
+      },
+      {
+        "command": "functionTree.cutFile",
+        "title": "Cut"
+      },
+      {
+        "command": "functionTree.copyFile",
+        "title": "Copy"
+      },
+      {
+        "command": "functionTree.pasteFile",
+        "title": "Paste"
       }
     ],
     "menus": {
@@ -119,59 +142,69 @@
           "group": "inline"
         },
         {
-          "command": "vscode.open",
-          "when": "view == functionTreeView && viewItem == file",
-          "group": "navigation"
+          "command": "functionTree.newFile",
+          "when": "view == functionTreeView && viewItem == folder",
+          "group": "navigation@1",
+          "title": "New File..."
+        },
+        {
+          "command": "functionTree.newFolder",
+          "when": "view == functionTreeView && viewItem == folder",
+          "group": "navigation@2",
+          "title": "New Folder..."
+        },
+        {
+          "command": "functionTree.openInTerminal",
+          "when": "view == functionTreeView && (viewItem == folder || viewItem == file)",
+          "group": "navigation@5",
+          "title": "Open in Integrated Terminal"
         },
         {
           "command": "revealFileInOS",
-          "when": "view == functionTreeView && viewItem == file",
+          "when": "view == functionTreeView && (viewItem == file || viewItem == folder)",
           "group": "2_files"
         },
         {
           "command": "copyFilePath",
-          "when": "view == functionTreeView && viewItem == file",
-          "group": "3_copy"
+          "when": "view == functionTreeView && (viewItem == file || viewItem == folder)",
+          "group": "3_copy@1",
+          "title": "Copy Path"
         },
         {
           "command": "copyRelativeFilePath",
-          "when": "view == functionTreeView && viewItem == file",
-          "group": "3_copy"
+          "when": "view == functionTreeView && (viewItem == file || viewItem == folder)",
+          "group": "3_copy@2",
+          "title": "Copy Relative Path"
+        },
+        {
+          "command": "functionTree.cutFile",
+          "when": "view == functionTreeView && (viewItem == file || viewItem == folder)",
+          "group": "4_mod@1",
+          "title": "Cut"
+        },
+        {
+          "command": "functionTree.copyFile",
+          "when": "view == functionTreeView && (viewItem == file || viewItem == folder)",
+          "group": "4_mod@2",
+          "title": "Copy"
+        },
+        {
+          "command": "functionTree.pasteFile",
+          "when": "view == functionTreeView && viewItem == folder",
+          "group": "4_mod@3",
+          "title": "Paste"
         },
         {
           "command": "functionTree.renameFile",
-          "when": "view == functionTreeView && viewItem == file",
-          "group": "4_mod"
+          "when": "view == functionTreeView && (viewItem == file || viewItem == folder)",
+          "group": "4_mod@4",
+          "title": "Rename"
         },
         {
           "command": "functionTree.deleteFile",
-          "when": "view == functionTreeView && viewItem == file",
-          "group": "4_mod"
-        },
-        {
-          "command": "revealFileInOS",
-          "when": "view == functionTreeView && viewItem == folder",
-          "group": "2_files"
-        },
-        {
-          "command": "copyFilePath",
-          "when": "view == functionTreeView && viewItem == folder",
-          "group": "3_copy"
-        },
-        {
-          "command": "copyRelativeFilePath",
-          "when": "view == functionTreeView && viewItem == folder",
-          "group": "3_copy"
-        },
-        {
-          "command": "functionTree.renameFile",
-          "when": "view == functionTreeView && viewItem == folder",
-          "group": "4_mod"
-        },
-        {
-          "command": "functionTree.deleteFile",
-          "when": "view == functionTreeView && viewItem == folder",
-          "group": "4_mod"
+          "when": "view == functionTreeView && (viewItem == file || viewItem == folder)",
+          "group": "4_mod@5",
+          "title": "Delete"
         }
       ]
     },
@@ -210,6 +243,31 @@
       }
     }
   },
+  "keybindings": [
+    {
+      "command": "functionTree.cutFile",
+      "key": "ctrl+x",
+      "mac": "cmd+x",
+      "when": "view == functionTreeView && (viewItem == file || viewItem == folder)"
+    },
+    {
+      "command": "functionTree.copyFile",
+      "key": "ctrl+c",
+      "mac": "cmd+c",
+      "when": "view == functionTreeView && (viewItem == file || viewItem == folder)"
+    },
+    {
+      "command": "functionTree.pasteFile",
+      "key": "ctrl+v",
+      "mac": "cmd+v",
+      "when": "view == functionTreeView && viewItem == folder"
+    },
+    {
+      "command": "functionTree.openInTerminal",
+      "key": "shift+alt+r",
+      "when": "view == functionTreeView && (viewItem == file || viewItem == folder)"
+    }
+  ],
   "scripts": {
     "bundle": "node bundle.js",
     "vscode:prepublish": "npm run bundle",

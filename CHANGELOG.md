@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.3.9] - 2025-10-28
+### Added
+- Create new files and folders directly from the Function Tree view.
+- Open files or folders in the integrated terminal.
+- Cut, Copy, Paste, Rename, and Delete files/folders via context menu.
+- Reveal files in OS Explorer/Finder.
+- Copy full or relative file paths from the tree view.
+
+### Improved
+- Paste now correctly moves cut files; copying auto-renames duplicates to avoid overwrite.
+- Overwrite confirmation prompt added for move operations.
+
 ## [1.3.8] – 2025-10-26
 ### 🧹 Context Menu Added & Safety Enhancements
 - Added Delete File/Folder command with a confirmation prompt to prevent accidental deletions.
